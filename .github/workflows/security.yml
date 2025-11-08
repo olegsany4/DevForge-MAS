@@ -1,0 +1,117 @@
+---
+# DevForge-MAS — CI: Security Checks
+# Шаблон job: положи в .github/workflows/security.yml или адаптируй под свой CI.
+
+name: security-checks
+
+"on":
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - security-*
+
+jobs:
+  security:
+    name: SAST & Secrets & Deps
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write  # OIDC, если потребуется
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            ruff \
+            mypy \
+            bandit \
+            semgrep \
+            pip-audit \
+            safety \
+            detect-secrets
+          # Для контейнеров/IaC можно добавить trivy/hadolint/syft позже.
+
+      - name: Ruff
+        run: ruff check .
+
+      - name: MyPy
+        run: |
+          if [ -d "src" ]; then
+            mypy --strict src || mypy src
+          else
+            echo "no src dir"
+          fi
+
+      - name: Bandit
+        run: |
+          if [ -d "src" ]; then
+            bandit -r src -lll
+          else
+            echo "no src dir"
+          fi
+
+      - name: Semgrep
+        run: |
+          semgrep ci --config p/ci --config p/python \
+          || semgrep ci --severity ERROR --config p/python
+
+      - name: Detect Secrets
+        run: |
+          detect-secrets scan --all-files > .secrets.report.json
+          echo "Detect-secrets report: .secrets.report.json"
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          config-path: ""
+        env:
+          GITLEAKS_NOTIFY_DISABLE: "true"
+
+      - name: Pip Audit
+        run: |
+          if [ -f "requirements.txt" ]; then
+            pip-audit -r requirements.txt || true
+          else
+            echo "no requirements.txt"
+          fi
+
+      - name: Safety
+        run: |
+          if [ -f "requirements.txt" ]; then
+            safety check -r requirements.txt || true
+          else
+            echo "no requirements.txt"
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            .secrets.report.json
+            sbom.json
+          if-no-files-found: ignore
+
+      - name: Summary
+        run: |
+          {
+            echo "### Security checks summary";
+            echo "- ruff/mypy/bandit/semgrep executed";
+            echo "- secrets scan (gitleaks/detect-secrets)";
+            echo "- deps (pip-audit/safety)";
+          } >> "$GITHUB_STEP_SUMMARY"
