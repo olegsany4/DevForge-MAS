@@ -1,0 +1,34 @@
+{
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "tag": "system",
+      "summary": "Health check"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items/:id",
+      "tag": "items",
+      "summary": "Get item by id",
+      "pathParams": ["id"]
+    },
+    {
+      "method": "POST",
+      "path": "/api/items",
+      "tag": "items",
+      "summary": "Create item",
+      "requestBodySchema": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "price": { "type": "number" },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  ],
+  "schemas": {}
+}

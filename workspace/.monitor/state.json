@@ -1,0 +1,45 @@
+{
+  "collected_at": "2025-11-12T21:09:40.406247+03:00",
+  "pipeline": {
+    "last_run_ts": null
+  },
+  "tests": {},
+  "coverage": {
+    "total_pct": null
+  },
+  "lint": {
+    "issues": null
+  },
+  "security": {
+    "bandit": {
+      "high": null,
+      "medium": null
+    }
+  },
+  "compliance": {
+    "artifacts_ok": true
+  },
+  "runtime": {
+    "backend": {
+      "port_listen": false,
+      "http_200": false
+    },
+    "frontend": {
+      "dev_server_listen": false
+    },
+    "db": {
+      "sqlite": {
+        "exists": true,
+        "size_mb": 0.19,
+        "migration_version": null
+      }
+    },
+    "proc": {
+      "cpu_pct": null,
+      "mem_mb": null
+    },
+    "workspace": {
+      "disk_free_gb": 162.04
+    }
+  }
+}

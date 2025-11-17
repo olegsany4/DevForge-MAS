@@ -1,0 +1,42 @@
+{
+  "missing": [],
+  "steps": [
+    {
+      "name": "required_artifacts",
+      "status": "OK",
+      "detail": "all present"
+    },
+    {
+      "name": "lint",
+      "status": "WARN",
+      "detail": "Command '['make', 'lint']' returned non-zero exit status 2."
+    },
+    {
+      "name": "tests",
+      "status": "OK",
+      "detail": ""
+    },
+    {
+      "name": "bandit",
+      "status": "WARN",
+      "detail": "Command '['make', 'bandit']' returned non-zero exit status 2."
+    },
+    {
+      "name": "compliance_files",
+      "status": "OK",
+      "detail": ""
+    },
+    {
+      "name": "db_smoke",
+      "status": "OK",
+      "detail": "DB_FILE=devforge_mas.sqlite3"
+    },
+    {
+      "name": "reproducibility_hash",
+      "status": "INFO",
+      "detail": "ca4fe6417bcce5ff28f50215cb210b62"
+    }
+  ],
+  "reproducibility_hash": "ca4fe6417bcce5ff28f50215cb210b62",
+  "db_file": "devforge_mas.sqlite3"
+}

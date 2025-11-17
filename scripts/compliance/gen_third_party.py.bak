@@ -1,0 +1,457 @@
+#!/usr/bin/env python3
+# scripts/compliance/gen_third_party.py
+# Генерация сводного списка сторонних зависимостей (Python + Node)
+# с нормализацией лицензий и политиками из ENV и compliance/policy.yaml.
+#
+# Исправления:
+# - _load_policy: безопасная обработка None в YAML (allowed_extra/ignore/overrides)
+# - _norm_license: единый return (сняли PLR0911)
+# - Строгое разведение типов (PyDep/NodeDep) — сняты ошибки mypy "NodeDep -> PyDep"
+# - Диагностика нарушений -> compliance/_violations.json
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess  # nosec: B404 - безопасный запуск без shell
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+# === Пути артефактов ===
+OUT_MD = Path("compliance/THIRD_PARTY_LICENSES.md")
+VIOLATIONS_JSON = Path("compliance/_violations.json")
+POLICY_YAML = Path("compliance/policy.yaml")
+
+SPLIT_ONCE = 1
+PARTS_EXPECTED = 2
+
+# База политики
+ALLOWED_BASE: set[str] = {
+    "MIT",
+    "BSD",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Apache-2.0",
+    "MPL-2.0",
+    "LGPL-2.1",
+    "LGPL-3.0",
+    "PSF-2.0",
+    "CC0-1.0",
+    "Unicode-DFS-2016",
+    "Python-2.0",
+    "Zlib",
+    "OpenSSL",
+    "ISC",
+    "Unlicense",
+}
+DISALLOWED: set[str] = {"GPL", "GPL-2.0", "GPL-3.0", "AGPL", "AGPL-3.0"}
+UNKNOWN = "UNKNOWN"
+
+_SPLIT_RE = re.compile(r"\s*(?:OR|AND|/|,|;|\||\+)\s*", flags=re.IGNORECASE)
+
+
+@dataclass
+class PyDep:
+    name: str
+    version: str
+    license: str
+
+
+@dataclass
+class NodeDep:
+    name: str
+    version: str
+    license: str
+
+
+@dataclass
+class Policy:
+    mode: str  # STRICT | RELAX
+    allowed_extra: set[str]
+    ignore: set[str]  # "name" или "name@version"
+    overrides: dict[str, str]  # ключ "name" или "name@version" -> лицензия
+
+
+def _run(cmd: list[str]) -> str:
+    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if res.returncode != 0:
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{res.stderr}")
+    return res.stdout
+
+
+def _parse_csv_env(name: str) -> list[str]:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return []
+    return [p.strip() for p in raw.split(",") if p.strip()]
+
+
+def _as_list(value: Any) -> list[Any]:
+    """Безопасно приводим YAML-значение к списку (None -> [])."""
+    if isinstance(value, list):
+        return value
+    if value in (None, "", False):
+        return []
+    return [value]
+
+
+def _as_overrides_list(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [x for x in value if isinstance(x, dict)]
+    return []
+
+
+def _load_policy() -> Policy:
+    # ENV
+    env_mode = (os.environ.get("COMPLIANCE_MODE", "STRICT") or "STRICT").upper()
+    env_allowed = set(_parse_csv_env("COMPLIANCE_ALLOWED_EXTRA"))
+    env_ignore = set(_parse_csv_env("COMPLIANCE_IGNORE_PACKAGES"))
+
+    # YAML (не обязателен)
+    y_mode = "STRICT"
+    y_allowed: set[str] = set()
+    y_ignore: set[str] = set()
+    y_overrides: dict[str, str] = {}
+
+    if POLICY_YAML.exists():
+        data = yaml.safe_load(POLICY_YAML.read_text(encoding="utf-8")) or {}
+        y_mode = str(data.get("mode") or "STRICT").upper()
+
+        for x in _as_list(data.get("allowed_extra")):
+            sx = str(x).strip()
+            if sx:
+                y_allowed.add(sx)
+
+        for x in _as_list(data.get("ignore")):
+            sx = str(x).strip()
+            if sx:
+                y_ignore.add(sx)
+
+        for item in _as_overrides_list(data.get("overrides")):
+            name = str(item.get("name", "")).strip()
+            version = str(item.get("version", "")).strip()
+            lic = str(item.get("license", "")).strip()
+            if not name or not lic:
+                continue
+            key = f"{name}@{version}" if version else name
+            y_overrides[key] = lic
+
+    mode = env_mode or y_mode
+    allowed_extra = y_allowed | env_allowed
+    ignore = y_ignore | env_ignore
+    overrides = y_overrides  # фиксируется в репозитории
+
+    return Policy(mode=mode, allowed_extra=allowed_extra, ignore=ignore, overrides=overrides)
+
+
+def _map_single_license(token: str) -> str:
+    su = token.upper().strip()
+
+    direct_map: dict[str, str] = {
+        # Частые человеческие формы
+        "APACHE SOFTWARE LICENSE": "Apache-2.0",
+        "APACHE LICENSE 2.0": "Apache-2.0",
+        "APACHE LICENSE, VERSION 2.0": "Apache-2.0",
+        "MOZILLA PUBLIC LICENSE 2.0 (MPL 2.0)": "MPL-2.0",
+        "MOZILLA PUBLIC LICENSE 2.0": "MPL-2.0",
+        "PYTHON SOFTWARE FOUNDATION LICENSE": "PSF-2.0",
+        "BSD LICENSE": "BSD",
+        "THE UNLICENSE": "Unlicense",
+        "UNLICENSE": "Unlicense",
+        # Короткие формы
+        "MIT": "MIT",
+        "APACHE-2.0": "Apache-2.0",
+        "APACHE 2.0": "Apache-2.0",
+        "APACHE2.0": "Apache-2.0",
+        "APACHE-2": "Apache-2.0",
+        "APACHE2": "Apache-2.0",
+        "BSD": "BSD",
+        "BSD-2-CLAUSE": "BSD-2-Clause",
+        "BSD-3-CLAUSE": "BSD-3-Clause",
+        "MPL-2.0": "MPL-2.0",
+        "LGPL-2.1": "LGPL-2.1",
+        "LGPL-3.0": "LGPL-3.0",
+        "GPL": "GPL",
+        "GPL-2.0": "GPL-2.0",
+        "GPL-3.0": "GPL-3.0",
+        "AGPL": "AGPL",
+        "AGPL-3.0": "AGPL",
+        "PSF-2.0": "PSF-2.0",
+        "CC0-1.0": "CC0-1.0",
+        "UNICODE-DFS-2016": "Unicode-DFS-2016",
+        "PYTHON-2.0": "Python-2.0",
+        "PYTHON 2.0": "Python-2.0",
+        "ZLIB": "Zlib",
+        "OPENSSL": "OpenSSL",
+        "ISC": "ISC",
+        "N/A": UNKNOWN,
+        "NONE": UNKNOWN,
+        "UNSPECIFIED": UNKNOWN,
+        "UNLICENSED": UNKNOWN,
+    }
+    mapped = direct_map.get(su, "")
+
+    if not mapped:
+        if su.startswith("APACHE"):
+            mapped = "Apache-2.0"
+        elif su.startswith("GPL"):
+            mapped = "GPL-3.0" if "3" in su else ("GPL-2.0" if "2" in su else "GPL")
+        elif su.startswith("AGPL"):
+            mapped = "AGPL-3.0" if "3" in su else "AGPL"
+        else:
+            mapped = token.strip() or UNKNOWN
+
+    return mapped
+
+
+def _norm_license(raw: str) -> str:
+    """
+    Нормализация: составные строки разбиваем, каждую часть маппим _map_single_license,
+    затем собираем обратно «A OR B». Один return — без PLR0911.
+    """
+    result = UNKNOWN
+    s = (raw or "").strip()
+    if not s:
+        result = UNKNOWN
+    else:
+        parts = [p for p in _SPLIT_RE.split(s) if p]
+        if len(parts) > 1:
+            norm_parts = [_map_single_license(p) for p in parts]
+            # если все UNKNOWN — оставим UNKNOWN, иначе склеим
+            if any(p != UNKNOWN for p in norm_parts):
+                result = " OR ".join(norm_parts)
+            else:
+                result = UNKNOWN
+        else:
+            result = _map_single_license(s)
+    return result
+
+
+def _license_tokens(lic: str) -> list[str]:
+    if not lic or lic == UNKNOWN:
+        return [UNKNOWN]
+    parts = [p.strip() for p in re.split(r"\s+OR\s+", lic, flags=re.IGNORECASE) if p.strip()]
+    return parts if parts else [lic]
+
+
+def _key(name: str, version: str) -> str:
+    return f"{name}@{version}" if version else name
+
+
+def _apply_overrides(license_str: str, name: str, version: str, ov: dict[str, str]) -> str:
+    k1 = _key(name, version)
+    if k1 in ov:
+        return _norm_license(ov[k1])
+    if name in ov:
+        return _norm_license(ov[name])
+    return license_str
+
+
+def _ignored(name: str, version: str, ignore: set[str]) -> bool:
+    k1 = _key(name, version)
+    return (k1 in ignore) or (name in ignore)
+
+
+def _policy_ok(lic: str, policy: Policy) -> bool:
+    allowed = set(ALLOWED_BASE) | set(policy.allowed_extra)
+    tokens = _license_tokens(lic)
+
+    if policy.mode == "RELAX":
+        # OK, если есть хотя бы один разрешённый токен
+        return any(t in allowed and t not in DISALLOWED and t != UNKNOWN for t in tokens)
+    # STRICT: все токены должны быть разрешены
+    return all(t in allowed and t not in DISALLOWED and t != UNKNOWN for t in tokens)
+
+
+def collect_python_deps(policy: Policy) -> list[PyDep]:
+    stdout = _run(["pip-licenses", "--format=json"])
+    try:
+        data = json.loads(stdout)
+    except json.JSONDecodeError as err:  # noqa: TRY003
+        raise RuntimeError("pip-licenses returned non-JSON output") from err
+
+    py_items: list[PyDep] = []
+    for row in data:
+        name = str(row.get("Name", "")).strip()
+        version = str(row.get("Version", "")).strip()
+        lic_raw = str(row.get("License", "")).strip()
+        lic = _norm_license(lic_raw)
+        if not name or not version:
+            continue
+        if _ignored(name, version, policy.ignore):
+            continue
+        lic = _apply_overrides(lic, name, version, policy.overrides)
+        py_items.append(PyDep(name=name, version=version, license=lic))
+    return py_items
+
+
+def collect_node_deps(policy: Policy) -> list[NodeDep]:
+    stdout = _run(["npx", "--yes", "license-checker", "--json"])
+    try:
+        data: dict[str, Any] = json.loads(stdout)
+    except json.JSONDecodeError as err:  # noqa: TRY003
+        raise RuntimeError("license-checker returned non-JSON output") from err
+
+    node_items: list[NodeDep] = []
+    for key, meta in data.items():
+        name = key
+        version = ""
+        if "@" in key:
+            parts = key.rsplit("@", SPLIT_ONCE)
+            if len(parts) == PARTS_EXPECTED:
+                name, version = parts[0], parts[1]
+        lic_raw = str(meta.get("licenses") or meta.get("license") or "")
+        lic = _norm_license(lic_raw)
+        if not name:
+            continue
+        if _ignored(name, version, policy.ignore):
+            continue
+        lic = _apply_overrides(lic, name, version, policy.overrides)
+        node_items.append(NodeDep(name=name, version=version, license=lic))
+    return node_items
+
+
+def _render_md(py: Iterable[PyDep], node: Iterable[NodeDep], policy: Policy) -> str:
+    lines: list[str] = []
+    lines.append("# Third-Party Licenses")
+    lines.append("")
+    lines.append("> Автогенерация: scripts/compliance/gen_third_party.py")
+    lines.append("")
+    lines.append("**Policy inputs**:")
+    lines.append(f"- MODE: {policy.mode}")
+    lines.append(f"- EXTRA_ALLOWED: {', '.join(sorted(policy.allowed_extra)) if policy.allowed_extra else '(none)'}")
+    lines.append(f"- IGNORE: {', '.join(sorted(policy.ignore)) if policy.ignore else '(none)'}")
+    lines.append(f"- OVERRIDES: {', '.join(sorted(policy.overrides.keys())) if policy.overrides else '(none)'}")
+    lines.append("")
+
+    bad_count = 0
+
+    lines.append("## Python")
+    lines.append("")
+    lines.append("| Package | Version | License | Policy |")
+    lines.append("|---------|---------|---------|--------|")
+    for d in sorted(py, key=lambda x: (x.name.lower(), x.version)):
+        ok = _policy_ok(d.license, policy)
+        lines.append(f"| {d.name} | {d.version or '-'} | `{d.license}` | {'OK' if ok else '**BAD**'} |")
+        if not ok:
+            bad_count += 1
+    lines.append("")
+
+    lines.append("## Node")
+    lines.append("")
+    lines.append("| Package | Version | License | Policy |")
+    lines.append("|---------|---------|---------|--------|")
+    for d in sorted(node, key=lambda x: (x.name.lower(), x.version)):
+        ok = _policy_ok(d.license, policy)
+        lines.append(f"| {d.name} | {d.version or '-'} | `{d.license}` | {'OK' if ok else '**BAD**'} |")
+        if not ok:
+            bad_count += 1
+
+    lines.append("")
+    if bad_count:
+        lines.append(f"**Policy summary:** обнаружено нарушений: {bad_count}")
+    else:
+        lines.append("**Policy summary:** нарушений не обнаружено.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> int:
+    policy = _load_policy()
+    OUT_MD.parent.mkdir(parents=True, exist_ok=True)
+
+    py_deps: list[PyDep] = collect_python_deps(policy)
+    node_deps: list[NodeDep] = collect_node_deps(policy)
+
+    md = _render_md(py_deps, node_deps, policy)
+    OUT_MD.write_text(md, encoding="utf-8")
+    _write_violations(py_deps, node_deps, policy)
+    print(f"[OK] Written {OUT_MD}")
+    print(f"[OK] Violations JSON -> {VIOLATIONS_JSON}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+# --- SAFE REFACTOR APPEND: mypy-proof violations writer ---
+
+# --- SAFE FALLBACK: _license_policy_ok (если отсутствует) ---
+def _license_policy_ok(lic: str) -> bool:  # noqa: D401
+    """Policy gate: базовая проверка лицензии согласно локальной политике."""
+    ALLOWED = {
+        "MIT","BSD","BSD-2-Clause","BSD-3-Clause","Apache-2.0","MPL-2.0","LGPL-2.1","LGPL-3.0",
+        # часто встречающееся добро:
+        "ISC","Unicode-DFS-2016","Python-2.0","Zlib","OpenSSL",
+    }
+    DISALLOWED = {"GPL","GPL-2.0","GPL-3.0","AGPL","AGPL-3.0"}
+    if lic in ALLOWED:
+        return True
+    if lic in DISALLOWED or lic == "UNKNOWN" or not lic:
+        return False
+    return False
+# --- END FALLBACK ---
+
+# --- SAFE REFACTOR: mypy-proof writer ---
+
+def _write_violations(
+    py_deps: Iterable[PyDep],
+    node_deps: Iterable[NodeDep],
+    policy: dict[str, object] | None = None,
+) -> None:
+    """
+    Пишем нарушения как list[dict[str,str]] — не смешиваем PyDep/NodeDep в одном list[T].
+    Не ломает API: точка вызова и файл-назначение остаются прежними.
+    """
+    items: list[dict[str, str]] = []
+
+    # Разбор политики (гибко: поддерживаем str / list / set)
+    allowed_extra: set[str] = set()
+    ignore_raw: set[str] = set()
+    if isinstance(policy, dict):
+        ax = policy.get("allowed_extra")
+        ig = policy.get("ignore")
+        if isinstance(ax, (list, set, tuple)):  # noqa: UP038
+            allowed_extra = {str(x).strip() for x in ax if str(x).strip()}
+        elif isinstance(ax, str):
+            allowed_extra = {s.strip() for s in ax.split(",") if s.strip()}
+        if isinstance(ig, (list, set, tuple)):  # noqa: UP038
+            ignore_raw = {str(x).strip() for x in ig if str(x).strip()}
+        elif isinstance(ig, str):
+            ignore_raw = {s.strip() for s in ig.split(",") if s.strip()}
+
+    def _ignored(name: str, version: str) -> bool:
+        if not ignore_raw:
+            return False
+        full = f"{name}@{version}" if version else name
+        return (full in ignore_raw) or (name in ignore_raw)
+
+    def _policy_ok_ext(name: str, version: str, lic: str) -> bool:
+        ok = _license_policy_ok(lic)
+        if lic in allowed_extra:
+            ok = True
+        if _ignored(name, version):
+            ok = True
+        return ok
+
+    for d in py_deps:
+        lic = getattr(d, "license", "")
+        name = getattr(d, "name", "")
+        version = getattr(d, "version", "") or ""
+        if not _policy_ok_ext(name, version, lic):
+            items.append({"eco": "python", "name": name, "version": version, "license": lic})
+
+    for d in node_deps:
+        lic = getattr(d, "license", "")
+        name = getattr(d, "name", "")
+        version = getattr(d, "version", "") or ""
+        if not _policy_ok_ext(name, version, lic):
+            items.append({"eco": "node", "name": name, "version": version, "license": lic})
+
+    VIOLATIONS_JSON.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")  # type: ignore[name-defined]
+# --- END SAFE REFACTOR ---

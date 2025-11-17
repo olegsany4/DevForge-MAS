@@ -1,0 +1,80 @@
+{
+  "layout": {
+    "Makefile": "",
+    "pyproject.toml": "",
+    ".env.example": "",
+    "README.md": "",
+    "workspace": {
+      "brief": { "PROJECT_BRIEF.md": "" },
+      "ac": { "ACCEPTANCE_CRITERIA.md": "" },
+      "adr": { "ADR-INDEX.md": "", "ADR-SET.json": "" },
+      "wbs": { "wbs.json": "" },
+      "artifacts": { ".gitkeep": "" },
+      "logs": { ".gitkeep": "" }
+    },
+    "configs": {
+      "app.yaml": "",
+      "orchestrator.yaml": "",
+      "agents.yaml": ""
+    },
+    "prompts": {
+      "anchor": { "anchor_supervisor.md": "" },
+      "roles": { "architect.md": "", "researcher.md": "", "engineer.md": "", "qa.md": "" }
+    },
+    "src": {
+      "devforge_mas": {
+        "__init__.py": "",
+        "core": {
+          "__init__.py": "",
+          "events.py": "",
+          "models.py": "",
+          "storage.py": "",
+          "registry.py": ""
+        },
+        "orchestrator": {
+          "__init__.py": "",
+          "engine.py": "",
+          "scheduler.py": "",
+          "router.py": ""
+        },
+        "agents": {
+          "__init__.py": "",
+          "researcher.py": "",
+          "architect.py": "",
+          "engineer.py": "",
+          "qa.py": "",
+          "publisher.py": ""
+        },
+        "adapters": {
+          "__init__.py": "",
+          "http_api.py": "",
+          "cli.py": "",
+          "metrics.py": "",
+          "logging.py": ""
+        },
+        "schemas": {
+          "__init__.py": "",
+          "brief.json": "",
+          "acceptance_criteria.json": "",
+          "adr_record.json": "",
+          "wbs_task.json": "",
+          "task_spec.json": "",
+          "agent_result.json": "",
+          "artifact_meta.json": ""
+        }
+      }
+    },
+    "tests": {
+      "unit": {},
+      "contract": {},
+      "e2e": {}
+    },
+    "scripts": {
+      "bootstrap.sh": "",
+      "dev_server.sh": ""
+    },
+    ".github": {
+      "workflows": { "ci.yml": "" }
+    }
+  }
+}

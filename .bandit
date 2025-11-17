@@ -1,0 +1,54 @@
+# Minimal, valid Bandit config (YAML) compatible with bandit 1.7.x
+# Preserves your excludes; avoids parsing error at line 13.
+
+---
+# Directories / globs to skip (string with commas OR list)
+# We keep them as a list for clarity.
+exclude_dirs:
+  - ".venv"
+  - "venv"
+  - "node_modules"
+  - ".tox"
+  - "build"
+  - "dist"
+  - ".mypy_cache"
+  - ".pytest_cache"
+  - ".ruff_cache"
+  - "**/site-packages/**"
+  - "workspace/**/.venv"
+  - "workspace/**/venv"
+  # [ADDED] Exclude test suite to allow pytest-style `assert` (B101) without disabling B101 globally:
+  # Bandit 1.7.x considers `exclude_dirs` for directory names at project root.
+  # If tests live at repo root (tests/), this is sufficient.
+  - "tests"
+
+# Per-file ignores example (keeps pytest assert, etc.)
+# Adjust patterns as needed.
+skips: []
+
+# You can keep B101 in tests via per_file_ignores:
+# NOTE: bandit uses ini-like syntax when passed via CLI; in YAML we map by file.
+# Bandit doesn’t officially support 'per_file_ignores' in YAML;
+# instead, we exclude tests rules via 'skips' on CLI or keep defaults.
+# To keep behavior, we rely on CLI -c .bandit and relaxed test rules.
+
+# Severity/confidence thresholds (optional)
+severity: "LOW"
+confidence: "LOW"
+
+# Plugins (default)
+# profiles or tests can be configured here if needed.
+
+# -----------------------------------------------------------------------------
+# Compatibility / Verification notes:
+# 1) Run bandit locally with repo root as CWD:
+#      bandit -c .bandit -r src tools
+#    (tests/ will be excluded via exclude_dirs; B101 remains active for non-tests.)
+#
+# 2) If your CI calls bandit differently, ensure it passes `-c .bandit` or uses
+#    the default discovery that picks this file at repo root.
+#
+# 3) We intentionally DO NOT disable B101 globally; only exclude tests directory.
+#    This keeps security checks strict for production code while avoiding noise
+#    for pytest-style assertions in tests.
+# -----------------------------------------------------------------------------

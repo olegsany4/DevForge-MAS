@@ -1,0 +1,10 @@
+{
+  "endpoints": [
+    { "method": "GET",  "path": "/health" },
+    { "method": "POST", "path": "/build" }
+  ],
+  "schemas": [
+    { "name": "HealthCheck", "type": "object", "required": ["status"] },
+    { "name": "BuildRequest", "type": "object", "required": ["project","pipeline"] }
+  ]
+}

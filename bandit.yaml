@@ -1,0 +1,8 @@
+# bandit.yaml
+exclude_dirs:
+  - tests
+  - tests_fe
+  - tests_db
+  - .venv
+  - dist
+  - .git

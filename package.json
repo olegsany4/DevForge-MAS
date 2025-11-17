@@ -1,0 +1,9 @@
+{
+  "name": "devforge-mas-meta",
+  "private": true,
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "license-checker": "^25.0.1"
+  }
+}

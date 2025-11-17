@@ -1,0 +1,20 @@
+agents:
+supervisor: { type: Supervisor, description: "Арбитраж шагов и критерии" }
+intake_pm: { type: IntakePM, description: "Уточнение запроса и KPI" }
+researcher: { type: Researcher, description: "Факт-лист и риски" }
+planner: { type: Planner, description: "WBS и acceptance" }
+architect: { type: Architect, description: "Архитектура и контракты" }
+techlead: { type: TechLead, description: "Техбазис, тулчейн, стандарты" }
+backend: { type: BackendDev, description: "Бэкенд" }
+frontend: { type: FrontendDev, description: "Фронтенд" }
+data: { type: DataEngineer, description: "Схемы и миграции" }
+devops: { type: DevOps, description: "CI/CD, контейнеры" }
+security: { type: Security, description: "Угрозы, SAST/DAST, секреты" }
+qa: { type: QATester, description: "Стратегия и тесты" }
+ux_writer: { type: UXWriter, description: "UX-копирайтинг" }
+tech_writer: { type: TechWriter, description: "Документация" }
+compliance: { type: Compliance, description: "Лицензии/правовые аспекты" }
+reviewer: { type: Reviewer, description: "Код-ревью" }
+integrator: { type: Integrator, description: "Сборка артефактов" }
+release: { type: ReleaseMgr, description: "Версионирование/релиз" }
+ops_monitor: { type: OpsMonitor, description: "Наблюдаемость" }

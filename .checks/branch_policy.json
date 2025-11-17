@@ -1,0 +1,23 @@
+{
+  "protected_branches": {
+    "main": {
+      "direct_push": "disabled",
+      "required_reviews": 1,
+      "dismiss_stale_reviews": true,
+      "require_up_to_date": true,
+      "required_status_checks": [
+        "Lint (ruff)",
+        "Format check (black)",
+        "Import order (isort)",
+        "Types (mypy)",
+        "Tests"
+      ],
+      "force_push": "disabled",
+      "signed_commits": "enabled"
+    },
+    "release/*": {
+      "direct_push": "maintainers-only",
+      "required_reviews": 1
+    }
+  }
+}

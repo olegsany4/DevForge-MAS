@@ -1,0 +1,39 @@
+# config/ops.yaml
+run_root: "workspace"
+logs_dir: "logs"
+log_file: "logs/devforge-mas.jsonl"
+sqlite_db: "devforge_mas.sqlite3"
+
+thresholds:
+  artifact_stale_hours: 24
+  db_max_size_mb: 512
+  cpu_warn: 85
+  mem_warn: 85
+  errors_max: 0
+
+endpoints:
+  backend_health: "http://127.0.0.1:8000/health"
+  # при dev-сборке фронта можно добавить:
+  # frontend_preview: "http://127.0.0.1:5173"
+
+artifacts:
+  - path: "workspace/.checks/architect.md5"
+  - path: "workspace/wbs/wbs.json"
+  - path: "compliance/NOTICE"
+  - path: "compliance/OBLIGATIONS.md"
+  - path: "compliance/THIRD_PARTY_LICENSES.md"
+  - path: "schemas/CONTRACTS.json"
+  - path: "workspace/adr/"
+
+stages:
+  - Research
+  - Planning
+  - Architecture
+  - Backend
+  - Frontend
+  - Data
+  - Security
+  - Compliance
+  - Integration
+  - Docs
+  - Release

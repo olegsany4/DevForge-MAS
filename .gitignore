@@ -1,0 +1,7 @@
+.venv/
+node_modules/
+.env
+.secrets.baseline
+devforge_mas.sqlite3
+workspace/**/venv/
+node_modules/

@@ -1,0 +1,6 @@
+[WARN] lint failed or tool missing: Command '['make', 'lint']' returned non-zero exit status 2.
+[OK] tests
+[WARN] bandit failed or tool missing: Command '['make', 'bandit']' returned non-zero exit status 2.
+[OK] compliance files present
+[OK] db smoke
+[INFO] reproducibility hash: ca4fe6417bcce5ff28f50215cb210b62

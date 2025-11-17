@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DevForge-MAS LogRecord",
+  "type": "object",
+  "properties": {
+    "ts":        { "type": "string", "format": "date-time" },
+    "level":     { "type": "string", "enum": ["DEBUG","INFO","WARN","ERROR","CRITICAL"] },
+    "run_id":    { "type": "string" },
+    "component": { "type": "string" },
+    "stage":     { "type": "string" },
+    "event":     { "type": "string" },
+    "msg":       { "type": "string" },
+    "status":    { "type": "string" },
+    "duration_ms": { "type": "number" },
+    "extra":     { "type": "object" }
+  },
+  "required": ["ts","level","component","event","msg"]
+}

@@ -1,0 +1,29 @@
+# DevForge-MAS · Bandit config
+# - Глобальные исключения шумных директорий
+# - Единый skip для B101 (assert) — допустим в тестах/скриптах
+# - Низкие пороги (LOW) для максимально полного отчёта; строгий режим включаем флагом в Makefile
+
+skips:
+  - B101  # assert used
+
+exclude_dirs:
+  - .venv
+  - venv
+  - node_modules
+  - dist
+  - build
+  - .mypy_cache
+  - .pytest_cache
+  - .ruff_cache
+  - workspace
+
+# Порог чувствительности отчёта (в CI можно поднять до MEDIUM/HIGH)
+severity: LOW
+confidence: LOW
+
+# Цели сканирования (дублирует Makefile, но удобно для локального запуска `bandit -c security/bandit.yml`)
+# Замечание: CLI-аргументы (если заданы) перекрывают это.
+targets:
+  - src
+  - tools
+  - tests

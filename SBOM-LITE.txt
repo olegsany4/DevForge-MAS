@@ -1,0 +1,11 @@
+# SBOM-LITE for DevForge-MAS 0.1.0-rc.1
+# Источник: requirements.txt / pyproject.toml (если присутствуют).
+# Если файл пуст — заполнить при следующем релизе.
+
+- Python 3.11.x
+- ruff
+- black
+- isort
+- pytest
+- bandit
+- sqlite3 (runtime)

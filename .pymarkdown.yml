@@ -1,0 +1,10 @@
+plugins:
+  - md013  # line-length
+  - md022  # blanks-around-headings
+  - md031  # blanks-around-fences
+  - md032  # blanks-around-lists
+  - md058  # blanks-around-tables
+# Отключаем только line-length
+config:
+  md013:
+    enabled: false

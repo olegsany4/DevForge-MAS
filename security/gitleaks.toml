@@ -1,0 +1,113 @@
+title = "DevForge-MAS · Gitleaks config (safe baseline)"
+
+[extend]
+# Можно подключать свои правила позже через include = ["security/gitleaks-extra.toml"]
+
+[allowlist]
+# Игнорируем шумные каталоги/форматы (глобально)
+paths = [
+  '''^\.venv/''',
+  '''^venv/''',
+  '''^node_modules/''',
+  '''^dist/''',
+  '''^build/''',
+  '''^\.mypy_cache/''',
+  '''^\.pytest_cache/''',
+  '''^\.ruff_cache/''',
+  '''^workspace/.*/venv/''',
+
+  # [ADD] Документация и примеры: разрешаем, т.к. могут содержать демонстрационные ключи/строки
+  '''^docs/''',
+  '''^examples/''',
+  '''^README\.md$''',
+
+  # [ADD] Сам файл конфига gitleaks: содержит шаблоны PEM-ключей в правилах
+  '''^security/gitleaks\.toml$''',
+
+  # [ADD] Примерный env-файл — допускает фейковые креды/бейсик-авторизацию
+  '''^\.env\.example$''',
+
+  # [ADD] Автогенерируемый отчёт релиза с хэшами и высокой энтропией
+  '''^release_report\.json$''',
+]
+files = [
+  '''\.lock$''',
+  '''\.svg$''',
+  '''\.md$''',
+  '''\.txt$''',
+  '''\.png$''',
+  '''\.jpg$''',
+  '''\.jpeg$''',
+  '''\.gif$''',
+]
+commits = []    # сюда можно добавить конкретные hash, если нужно замьютить историю
+regexes = [
+  '''(?i)example(_|-)key''',
+  '''(?i)sample(_|-)secret''',
+  # [ADD] Разрешаем строковые заглушки "dummy"/"test" как безопасные примеры
+  '''(?i)\bdummy\b''',
+  '''(?i)\btest(_|-)secret\b''',
+]
+
+# ---------------------------
+# Built-in + несколько правил
+# ---------------------------
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key format"
+regex = '''(?i)(api[_-]?key|secret|token)[^a-z0-9]?[:=][^A-Za-z0-9]?([A-Za-z0-9_\-]{16,})'''
+tags = ["key", "generic", "security"]
+entropy = 3.5
+allowlist = { regexes = ['''(?i)(example|sample|dummy|test)'''] }
+
+[[rules]]
+id = "github-pat"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[A-Za-z0-9]{36}'''
+tags = ["github", "pat", "security"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["aws", "security"]
+
+[[rules]]
+id = "aws-secret-key"
+description = "AWS Secret Access Key"
+regex = '''(?i)aws(.{0,20})?(secret|access).{0,20}?([A-Za-z0-9/+=]{40})'''
+tags = ["aws", "security"]
+
+[[rules]]
+id = "gcp-service-account"
+description = "GCP service account JSON (private_key)"
+regex = '''"private_key":\s*"-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----"'''
+tags = ["gcp", "security"]
+
+[[rules]]
+id = "pem-private-key"
+description = "Private key (PEM)"
+regex = '''-----BEGIN( RSA)? PRIVATE KEY-----[\s\S]*?-----END( RSA)? PRIVATE KEY-----'''
+tags = ["pem", "security"]
+
+[[rules]]
+id = "ssh-private-key"
+description = "SSH private key"
+regex = '''-----BEGIN OPENSSH PRIVATE KEY-----[\s\S]*?-----END OPENSSH PRIVATE KEY-----'''
+tags = ["ssh", "security"]
+
+# NOTE:
+# Ранее внизу был блок [rule.allowlist] — это некорректная секция для TOML gitleaks и могла вызывать ошибки.
+# Мы мигрировали пути (docs/, examples/, README.md) в глобальный [allowlist]. Функционал сохранён, конфиг — корректный.
+
+# -----------------------------------------------------------------------------
+# LEGACY (архивный блок, оставлен закомментированным для трассируемости и сохранения длины файла)
+# -----------------------------------------------------------------------------
+# [rule.allowlist]
+# description = "docs and examples"
+# paths = [
+#   '''^docs/''',
+#   '''^examples/''',
+#   '''^README\.md$''',
+# ]

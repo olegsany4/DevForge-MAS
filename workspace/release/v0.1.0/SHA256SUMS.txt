@@ -1,0 +1,13 @@
+10f140057db68d7ae3788867a4d0266c7a5326d43fd17219027e9b32714b467b  ./LICENSE
+6a464e06dc205f8ea05ef72c6e500722d6f50827a5c3c0de76dc187512e6fffe  ./CHANGELOG.md
+6632703f1fde5c8bea2278a5e63bb531b6c8480c570b2a8dcf94e48fa0c81b69  ./dist/devforge_mas-0.1.1-py3-none-any.whl
+ceee46089ded35b4c1a9b18ebcb6af0d9f1b1cf48a84027e858baefd4ba210da  ./dist/devforge_mas-0.1.1.tar.gz
+16d825b4fb49ff6a6e2cd81b5d04a1ce30e47d517bb50eed598888ece0429dc7  ./dist/devforge_mas-0.1.0-py3-none-any.whl
+2d56d0acb2e0c050f3d41b2b4bad1cab9ca4fbe88cb9a49ad49442da99346499  ./dist/devforge-mas-0.1.0-rc.1.tar.gz
+951e3bcf30db1cda0af632a5b42350343a219814a7da5b949800ae1afc7c239f  ./dist/SHA256SUMS
+52de6abeff75d90c657807722edfa313f1fa7c5bf62f8fd219a68a78410c1253  ./dist/devforge_mas-0.1.0.tar.gz
+1ec98daeb79f8568e39b4d83cc2442a2c866c191d4b06a8750f39c9f2dbd93b3  ./compliance/NOTICE
+3cae1835b9fd5f71dd591530468bbdc5ca4a263c961d56cd6f4b99d4e2a7a9bb  ./compliance/OBLIGATIONS.md
+5ceab837021aaa48f561036099337e6b4a0fb3dd41015ac12fa1738e9d292b82  ./compliance/THIRD_PARTY_LICENSES.md
+14e653024bb90f022247445945793860538c53e072fed03dad76590fb17edcf7  ./README.md
+eee4d945efd43581879a615f35aa484e4a1300f086a959996518b40b5d0e6977  ./SHA256SUMS.txt

@@ -1,0 +1,19 @@
+{
+  "version": "0.1.0",
+  "endpoints": [
+    {"method": "GET", "path": "/health", "response": "HealthResponse"},
+    {"method": "GET", "path": "/contracts", "response": "ContractsResponse"},
+    {"method": "POST", "path": "/agents/{name}/task", "request": "AgentTaskRequest", "response": "AgentTaskResponse"},
+    {"method": "POST", "path": "/workflows/{id}/run", "request": "WorkflowRunRequest", "response": "WorkflowRunResponse"},
+    {"method": "GET", "path": "/artifacts/{artifact_id}", "response": "ArtifactResponse"}
+  ],
+  "schemas": {
+    "HealthResponse": {"type": "object", "properties": {"ok": {"type":"boolean"}, "service":{"type":"string"}, "ts":{"type":"string"}}},
+    "ContractsResponse": {"type":"object","properties":{"ok":{"type":"boolean"},"raw":{"type":["string","null"]}}},
+    "AgentTaskRequest": {"type": "object", "properties": {"task": {"type":"string"}, "params": {"type":"object"}}, "required": ["task"]},
+    "AgentTaskResponse": {"type":"object","properties":{"ok":{"type":"boolean"},"task_id":{"type":"string"},"result":{"type":"object"}}},
+    "WorkflowRunRequest": {"type":"object","properties":{"params":{"type":"object"}}},
+    "WorkflowRunResponse": {"type":"object","properties":{"ok":{"type":"boolean"},"workflow_id":{"type":"string"}}},
+    "ArtifactResponse": {"type":"object","properties":{"ok":{"type":"boolean"},"artifact":{"type":"object"}}}
+  }
+}

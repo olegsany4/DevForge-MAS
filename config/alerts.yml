@@ -1,0 +1,10 @@
+# Простые пороги для alerts.py
+slo:
+  last_green_hours: 24
+  coverage_min: 70
+  bandit_high_max: 0
+  db_sqlite_max_mb: 512
+
+runtime:
+  backend_required: true
+  frontend_required: false

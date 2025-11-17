@@ -1,0 +1,23 @@
+services:
+  devforge-mas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devforge-mas
+    environment:
+      # Порт, на котором внутри контейнера слушает gunicorn/uvicorn
+      - PORT=5000
+      # Путь до SQLite-файла внутри контейнера
+      - DB_FILE=/app/data/devforge_mas.sqlite3
+    ports:
+      # API доступен на http://localhost:5000
+      # - "5000:5000"
+      # UI доступен на http://localhost/ (порт 80 проброшен на тот же backend)
+      - "80:5000"
+    volumes:
+      # Персистентное хранение SQLite в отдельном Docker-томе
+      - devforge_mas_db:/app/data
+    restart: unless-stopped
+
+volumes:
+  devforge_mas_db:

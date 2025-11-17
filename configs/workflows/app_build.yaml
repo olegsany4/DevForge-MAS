@@ -1,0 +1,19 @@
+workflow:
+name: app_build
+steps:
+- { id: intake, agent: intake_pm, input_from: request }
+- { id: research, agent: researcher, input_from: intake }
+- { id: plan, agent: planner, input_from: research }
+- { id: design, agent: architect, input_from: plan }
+- { id: techbase, agent: techlead, input_from: design }
+- { id: be, agent: backend, input_from: techbase }
+- { id: fe, agent: frontend, input_from: techbase }
+- { id: data, agent: data, input_from: techbase }
+- { id: sec, agent: security, input_from: be }
+- { id: qa, agent: qa, input_from: be }
+- { id: docs, agent: tech_writer, input_from: be }
+- { id: review, agent: reviewer, input_from: qa }
+- { id: compliance, agent: compliance, input_from: review }
+- { id: integrate, agent: integrator, input_from: compliance }
+- { id: release, agent: release, input_from: integrate }
+- { id: observe, agent: ops_monitor, input_from: release }

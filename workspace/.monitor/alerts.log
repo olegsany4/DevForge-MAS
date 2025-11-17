@@ -1,0 +1,2 @@
+2025-11-12T21:09:40.563414 CRITICAL pipeline.last_green Последний зелёный пайплайн устарел
+2025-11-12T21:09:40.665482 CRITICAL backend.down Порт backend не слушает

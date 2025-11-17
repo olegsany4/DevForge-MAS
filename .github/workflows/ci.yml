@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.6"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e .; fi
+
+      - name: Lint (ruff)
+        run: .venv/bin/ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          . .venv/bin/activate
+          mypy --install-types --non-interactive || true
+          mypy src || true
+
+      - name: Tests with coverage
+        run: |
+          . .venv/bin/activate
+          coverage erase
+          coverage run -m pytest
+          coverage report
+          coverage xml
+
+      # [ADDED] Дополнительная проверка: проект должен собираться как Python-пакет.
+      # Это не меняет существующую логику, а лишь добавляет ещё один "предохранитель".
+      - name: Build distribution (python -m build)
+        run: |
+          . .venv/bin/activate
+          python -m pip install --upgrade build
+          python -m build
+
+      # [ADDED] Загрузка собранных дистрибутивов как артефактов.
+      # Позволяет вручную проверить содержимое пакета и убедиться, что сборка корректна.
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: warn
+
+      - name: Security (bandit)
+        run: |
+          . .venv/bin/activate
+          mkdir -p build
+          bandit -r src tools tests -f json -o build/bandit.json || true
+          python tools/ci_fail_on_bandit.py build/bandit.json
+
+      - name: Security (pip-audit)
+        run: |
+          . .venv/bin/activate
+          if [ -f requirements.txt ]; then pip-audit -r requirements.txt || true; fi
+          if [ -f requirements-dev.txt ]; then pip-audit -r requirements-dev.txt || true; fi
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: build

@@ -1,0 +1,8 @@
+{
+  "sections": {
+    "brief": "workspace/BRIEF.md",
+    "adr": "workspace/ADR",
+    "contracts": "workspace/CONTRACTS.json",
+    "wbs": "workspace/wbs/wbs.json"
+  }
+}

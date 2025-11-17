@@ -1,0 +1,15 @@
+# .markdownlint.yaml
+# MD013 убираем, остальные правила — включены.
+MD013: false       # Line length
+MD022: true        # Headings should be surrounded by blank lines
+MD031: true        # Fenced code blocks should be surrounded by blank lines
+MD032: true        # Lists should be surrounded by blank lines
+MD058: true        # Tables should be surrounded by blank lines
+
+# Доп. игноры (кроме exclude в pre-commit)
+ignores:
+  - "node_modules/**"
+  - ".venv/**"
+  - "workspace/**/venv/**"
+  - "release/**/compliance/OBLIGATIONS.md"
+  - "workspace/release/**/compliance/OBLIGATIONS.md"

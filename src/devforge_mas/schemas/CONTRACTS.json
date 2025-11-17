@@ -1,0 +1,132 @@
+{
+  "contracts": {
+    "api": {
+      "service": "devforge-mas",
+      "version": "v1",
+      "basePath": "/api/v1",
+      "auth": "token (optional, configurable)"
+    },
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "/pipelines/start",
+        "summary": "Запустить фабричный пайплайн",
+        "request_schema": "TaskSpec",
+        "response": { "run_id": "string", "status": "started" }
+      },
+      {
+        "method": "GET",
+        "path": "/pipelines/{run_id}/status",
+        "summary": "Статус запуска",
+        "response": { "run_id": "string", "stage": "string", "state": "pending|running|failed|done", "progress": "0-100" }
+      },
+      {
+        "method": "GET",
+        "path": "/pipelines/{run_id}/artifacts",
+        "summary": "Список артефактов",
+        "response": { "items": [ { "$ref": "ArtifactMeta" } ] }
+      },
+      {
+        "method": "POST",
+        "path": "/agents/{name}/invoke",
+        "summary": "Прямой вызов агента",
+        "request_schema": "TaskSpec",
+        "response": { "$ref": "AgentResult" }
+      },
+      {
+        "method": "GET",
+        "path": "/healthz",
+        "summary": "Проверка здоровья",
+        "response": { "ok": true }
+      }
+    ],
+    "schemas": {
+      "Brief": {
+        "type": "object",
+        "required": ["topic", "audience", "kpi"],
+        "properties": {
+          "topic": { "type": "string", "minLength": 3 },
+          "audience": { "type": "string" },
+          "scope": { "type": "string" },
+          "constraints": { "type": "array", "items": { "type": "string" } },
+          "kpi": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      },
+      "AcceptanceCriteria": {
+        "type": "object",
+        "required": ["items", "timestamp"],
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time" },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "desc", "must"],
+              "properties": {
+                "id": { "type": "string" },
+                "desc": { "type": "string" },
+                "must": { "type": "boolean" }
+              }
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "ADRRecord": {
+        "type": "object",
+        "required": ["id", "decision", "rationale"],
+        "properties": {
+          "id": { "type": "string" },
+          "decision": { "type": "string" },
+          "rationale": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "WBSTask": {
+        "type": "object",
+        "required": ["id", "desc"],
+        "properties": {
+          "id": { "type": "string" },
+          "desc": { "type": "string" },
+          "deps": { "type": "array", "items": { "type": "string" }, "default": [] },
+          "status": { "type": "string", "enum": ["todo", "doing", "done"], "default": "todo" }
+        },
+        "additionalProperties": false
+      },
+      "TaskSpec": {
+        "type": "object",
+        "required": ["brief", "ac", "stages"],
+        "properties": {
+          "brief": { "$ref": "Brief" },
+          "ac": { "$ref": "AcceptanceCriteria" },
+          "stages": { "type": "array", "items": { "type": "string" } },
+          "options": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "AgentResult": {
+        "type": "object",
+        "required": ["agent", "stage", "outputs", "artifacts"],
+        "properties": {
+          "agent": { "type": "string" },
+          "stage": { "type": "string" },
+          "outputs": { "type": "object", "additionalProperties": true },
+          "artifacts": { "type": "array", "items": { "$ref": "ArtifactMeta" } },
+          "logs_ref": { "type": "string" },
+          "correlation_id": { "type": "string" }
+        }
+      },
+      "ArtifactMeta": {
+        "type": "object",
+        "required": ["id", "path", "hash"],
+        "properties": {
+          "id": { "type": "string" },
+          "path": { "type": "string" },
+          "hash": { "type": "string" },
+          "mime": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}
